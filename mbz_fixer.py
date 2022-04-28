@@ -19,10 +19,12 @@ def parse_csv(usercsv):
 def fix_xml(users_xml, usermap):
     users_tree = ET.parse(users_xml)
     users_root = users_tree.getroot()
+    changed = False
 
     for user in users_root.findall('user'):
         username = user.find('username').text
         if username in usermap:
+            changed = True
             email_node = user.find('email')
             old_email = email_node.text
             email_node.text = usermap[username]
@@ -30,8 +32,9 @@ def fix_xml(users_xml, usermap):
                   (username, old_email, email_node.text)
             )
 
-    users_tree.write(users_xml)
-
+    if changed:
+        users_tree.write(users_xml)
+    return changed
 
 
 def fix_mbz(usercsv, backupfile):
@@ -67,19 +70,19 @@ def fix_mbz(usercsv, backupfile):
             mb.extract(users_xml, path=temp_dir)
 
         users_xml = os.path.join(temp_dir, 'users.xml')
-        fix_xml(users_xml, usermap)
+        changed = fix_xml(users_xml, usermap)
 
-        # Apparently Python tarfile can't delete files from the archive. At
-        # this point it may be best to just use CLI tar for everything
-        os.system('tar -vf ' + temp_tar + ' --delete users.xml')
+        # May not need to delete the file. It causes corruption issues in some versions of tar.
+        # os.system('tar -vf ' + temp_tar + ' --delete users.xml')
 
-        with tarfile.open(temp_tar, 'a') as mb:
-            mb.add(users_xml, 'users.xml')
+        if changed:
+            with tarfile.open(temp_tar, 'a') as mb:
+                mb.add(users_xml, 'users.xml')
 
-        # Zip it back up and overwrite the original.
-        os.system('gzip ' + temp_tar)
-        os.remove(backupfile)
-        shutil.copy(temp_tgz, backupfile)
+            # Zip it back up and overwrite the original.
+            os.system('gzip ' + temp_tar)
+            os.remove(backupfile)
+            shutil.copy(temp_tgz, backupfile)
 
     finally:
         shutil.rmtree(temp_dir)
