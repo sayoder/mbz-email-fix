@@ -13,3 +13,5 @@ where `user_map.csv` is a headerless CSV file with a username and email column (
 
 or `python mbz_fixer.py -h` for usage info.
 
+### Caveats
+Currently, the new users.xml is simply appended to the course archive. Deleting the file caused corruption issues on some .mbz files on certain versions of `tar`. By convention, if there are two identical paths in a tar archive, the last is used, so appending the new file seems to work anyway.
